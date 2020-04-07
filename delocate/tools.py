@@ -3,12 +3,12 @@
 from subprocess import Popen, PIPE
 
 import os
-from os.path import join as pjoin, relpath, isdir, exists
+from os.path import join as pjoin, relpath, isdir, isfile, exists
 import zipfile
 import re
 import stat
 import time
-
+import warnings
 
 class InstallNameError(Exception):
     pass
@@ -45,6 +45,7 @@ def back_tick(cmd, ret_err=False, as_str=True, raise_err=None):
     Raises RuntimeError if command returns non-zero exit code and `raise_err`
     is True
     """
+    print(cmd)
     if raise_err is None:
         raise_err = False if ret_err else True
     cmd_is_seq = isinstance(cmd, (list, tuple))
@@ -428,6 +429,22 @@ def find_package_dirs(root_path):
     ----------
     root_path : str
         Directory to search for package subdirectories
+    Returns
+    -------
+    Set of strings where each is a subdirectory of `root_path`, containing
+    an ``__init__.py`` file.  Paths prefixed by `root_path`
+    """
+    warnings.warn("find_package_dirs() is deprecated, please use find_packages()", DeprecationWarning)
+    return [p for p, is_dir in find_packages(root_path) if is_dir]
+
+
+def find_packages(root_path, lib_filt_func=None):
+    """ Find python packages in directory `root_path`
+
+    Parameters
+    ----------
+    root_path : str
+        Directory to search for package subdirectories
 
     Returns
     -------
@@ -439,7 +456,9 @@ def find_package_dirs(root_path):
     for entry in os.listdir(root_path):
         fname = entry if root_path == '.' else pjoin(root_path, entry)
         if isdir(fname) and exists(pjoin(fname, '__init__.py')):
-            package_sdirs.add(fname)
+            package_sdirs.add((fname, True))
+        elif isfile(fname) and dylibs_only(fname):
+            package_sdirs.add((fname, False))
     return package_sdirs
 
 
@@ -560,3 +579,7 @@ def validate_signature(filename):
 
     # This file's signature is invalid and needs to be replaced
     replace_signature(filename, '-')  # Replace with an ad-hoc signature
+
+def dylibs_only(filename):
+    return (filename.endswith('.so') or
+            filename.endswith('.dylib'))
