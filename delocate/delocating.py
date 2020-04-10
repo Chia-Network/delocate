@@ -304,6 +304,7 @@ def delocate_wheel(in_wheel,
                    copy_filt_func=filter_system_libs,
                    require_archs=None,
                    check_verbose=False,
+                   insert_file=None,
                    ):
     """ Update wheel by copying required libraries to `lib_sdir` in wheel
 
@@ -367,6 +368,21 @@ def delocate_wheel(in_wheel,
         all_copied = {}
         wheel_dir = realpath(pjoin(tmpdir, 'wheel'))
         zip2dir(in_wheel, wheel_dir)
+
+        if insert_file is not None:
+            shutil.copy(insert_file, wheel_dir)
+            foo={}
+            foo[insert_file]= {insert_file:insert_file}
+            copied_libs=dict(foo)
+            print(copied_libs)
+            _merge_lib_dict(all_copied, copied_libs)
+            print(all_copied)
+            print(wheel_dir)
+            print(out_wheel)
+            rewrite_record(wheel_dir)
+            dir2zip(wheel_dir, out_wheel)
+            return all_copied # stripped_lib_dict(all_copied, wheel_dir + os.path.sep)
+
         for package_path, is_dir in find_packages(wheel_dir):
             lib_path = pjoin(package_path, lib_sdir)
             if is_dir:
